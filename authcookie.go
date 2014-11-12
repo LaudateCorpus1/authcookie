@@ -50,7 +50,7 @@ import (
 
 const (
 	decodedMinLength = 4 /*expiration*/ + 1 /*login*/ + 32 /*signature*/
-	decodedMaxLength = 1024                                /* maximum decoded length, for safety */
+	decodedMaxLength = 3000                                /* maximum decoded length, for safety */
 )
 
 // MinLength is the minimum allowed length of cookie string.
