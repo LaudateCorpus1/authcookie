@@ -89,16 +89,16 @@ func TestLoginWithGetter(t *testing.T) {
 		t.Errorf("Expected cookie")
 	}
 
-	ld := LoginWithGetter(cookie, shared_secret, func(data []byte) []byte {
-		return user_secret
+	ld := LoginWithGetter(cookie, shared_secret, func(data []byte) ([]byte, error) {
+		return user_secret, nil
 	})
 
 	if ld != login {
 		t.Errorf("Expected %s = %s", ld, login)
 	}
 
-	bad_ld := LoginWithGetter(cookie, shared_secret, func(data []byte) []byte {
-		return []byte("somethign else")
+	bad_ld := LoginWithGetter(cookie, shared_secret, func(data []byte) ([]byte, error) {
+		return []byte("somethign else"), nil
 	})
 
 	if bad_ld != "" {

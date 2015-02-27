@@ -189,9 +189,9 @@ func VerifySig(data []byte, sig []byte, secret []byte) (*time.Time, error) {
 	return &expires, nil
 }
 
-type getData func([]byte) []byte
+type GetUserSecret func([]byte) ([]byte, error)
 
-func LoginWithGetter(cookie string, shared_secret []byte, salt getData) string {
+func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret) string {
 
 	//login data, signature data, signature, error
 	ld, sd, sig, err := ParseIntoParts(cookie)
@@ -199,8 +199,13 @@ func LoginWithGetter(cookie string, shared_secret []byte, salt getData) string {
 		return ""
 	}
 
+	user_secret, err := salt(ld)
+	if err != nil {
+		return ""
+	}
+
 	//verify signature
-	exp, err := VerifySig(sd, sig, UserSecret(salt(ld), shared_secret))
+	exp, err := VerifySig(sd, sig, UserSecret(user_secret, shared_secret))
 	if err != nil || exp.Before(time.Now()) {
 		return ""
 	}
