@@ -22,7 +22,7 @@
 //	// cookie is now:
 //	// Tajh02JlbmRlcskYMxowgwPj5QZ94jaxhDoh3n0Yp4hgGtUpeO0YbMTY
 //	// send it to user's browser..
-//	
+//
 //	// To authenticate a user later, receive cookie and:
 //	login := authcookie.Login(cookie, secret)
 //	if login != "" {
@@ -103,7 +103,7 @@ func NewSinceNow(login string, dur time.Duration, secret []byte) string {
 // expiration time extracted from the cookie. If the cookie fails verification
 // or is not well-formed, the function returns an error.
 //
-// Callers must: 
+// Callers must:
 //
 // 1. Check for the returned error and deny access if it's present.
 //
@@ -151,4 +151,67 @@ func Login(cookie string, secret []byte) string {
 		return ""
 	}
 	return l
+}
+
+//Login Data, Signature Data, Signature, Error
+func ParseIntoParts(cookie string) ([]byte, []byte, []byte, error) {
+
+	blen := base64.URLEncoding.DecodedLen(len(cookie))
+	// Avoid allocation if cookie is too short or too long.
+	if blen < decodedMinLength || blen > decodedMaxLength {
+		return nil, nil, nil, ErrMalformedCookie
+	}
+	b, err := base64.URLEncoding.DecodeString(cookie)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	// Decoded length may be different from max length, which
+	// we allocated, so check it, and set new length for b.
+	blen = len(b)
+	if blen < decodedMinLength {
+		return nil, nil, nil, ErrMalformedCookie
+	}
+
+	b = b[:blen]
+	sig := b[blen-32:]
+	data := b[:blen-32]
+	return data[4:], data, sig, nil
+}
+
+func VerifySig(data []byte, sig []byte, secret []byte) (*time.Time, error) {
+
+	realSig := getSignature(data, secret)
+	if subtle.ConstantTimeCompare(realSig, sig) != 1 {
+		return nil, ErrWrongSignature
+	}
+
+	expires := time.Unix(int64(binary.BigEndian.Uint32(data[:4])), 0)
+	return &expires, nil
+}
+
+type getData func([]byte) []byte
+
+func LoginWithGetter(cookie string, shared_secret []byte, salt getData) string {
+
+	//login data, signature data, signature, error
+	ld, sd, sig, err := ParseIntoParts(cookie)
+	if err != nil {
+		return ""
+	}
+
+	//verify signature
+	exp, err := VerifySig(sd, sig, UserSecret(salt(ld), shared_secret))
+	if err != nil || exp.Before(time.Now()) {
+		return ""
+	}
+
+	return string(ld)
+
+}
+
+func UserSecret(user_secret []byte, shared_secret []byte) []byte {
+
+	//generate user specific secret
+	return append(user_secret, shared_secret...)
+
 }

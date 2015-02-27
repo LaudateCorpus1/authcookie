@@ -76,3 +76,32 @@ func TestLogin(t *testing.T) {
 		t.Errorf("returned login from expired cookie")
 	}
 }
+
+func TestLoginWithGetter(t *testing.T) {
+
+	login := "Login Info"
+
+	user_secret := []byte("user")
+	shared_secret := []byte("shared")
+
+	cookie := NewSinceNow(login, time.Minute, UserSecret(user_secret, shared_secret))
+	if cookie == "" {
+		t.Errorf("Expected cookie")
+	}
+
+	ld := LoginWithGetter(cookie, shared_secret, func(data []byte) []byte {
+		return user_secret
+	})
+
+	if ld != login {
+		t.Errorf("Expected %s = %s", ld, login)
+	}
+
+	bad_ld := LoginWithGetter(cookie, shared_secret, func(data []byte) []byte {
+		return []byte("somethign else")
+	})
+
+	if bad_ld != "" {
+		t.Errorf("Expected %s == '' ", bad_ld)
+	}
+}
