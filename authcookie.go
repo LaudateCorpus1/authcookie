@@ -71,6 +71,7 @@ func getSignature(b []byte, secret []byte) []byte {
 var (
 	ErrMalformedCookie = errors.New("malformed cookie")
 	ErrWrongSignature  = errors.New("wrong cookie signature")
+	ErrExpired         = errors.New("Cookie Expired")
 )
 
 // New returns a signed authentication cookie for the given login,
@@ -191,26 +192,30 @@ func VerifySig(data []byte, sig []byte, secret []byte) (*time.Time, error) {
 
 type GetUserSecret func([]byte) ([]byte, error)
 
-func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret) string {
+func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret) (string, error) {
 
 	//login data, signature data, signature, error
 	ld, sd, sig, err := ParseIntoParts(cookie)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	user_secret, err := salt(ld)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	//verify signature
 	exp, err := VerifySig(sd, sig, UserSecret(user_secret, shared_secret))
-	if err != nil || exp.Before(time.Now()) {
-		return ""
+	if err != nil {
+		return "", err
 	}
 
-	return string(ld)
+	if err != nil || exp.Before(time.Now()) {
+		return "", ErrExpired
+	}
+
+	return string(ld), nil
 
 }
 
