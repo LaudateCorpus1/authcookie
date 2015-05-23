@@ -192,7 +192,7 @@ func VerifySig(data []byte, sig []byte, secret []byte) (*time.Time, error) {
 
 type GetUserSecret func([]byte) ([]byte, error)
 
-func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret) (string, error) {
+func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret, now time.Time) (string, error) {
 
 	//login data, signature data, signature, error
 	ld, sd, sig, err := ParseIntoParts(cookie)
@@ -211,7 +211,7 @@ func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret) (s
 		return "", err
 	}
 
-	if err != nil || exp.Before(time.Now()) {
+	if err != nil || exp.Before(now) {
 		return "", ErrExpired
 	}
 
