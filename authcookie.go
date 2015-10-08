@@ -197,7 +197,7 @@ func LoginWithGetter(cookie string, shared_secret []byte, salt GetUserSecret, no
 	//login data, signature data, signature, error
 	ld, sd, sig, err := ParseIntoParts(cookie)
 	if err != nil {
-		return "", err
+		return "", ErrMalformedCookie
 	}
 
 	user_secret, err := salt(ld)
